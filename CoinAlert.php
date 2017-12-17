@@ -1,14 +1,14 @@
 <?php
-/*
-* reminder
-*	 okay, so it basically stores necessary data in the json file, now what we need to do is read through it and separate it by time stamp. diff in time stamp should be ABOUT 5 minutes. so separate based off that and then ??
-*/
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+$ripple_threshold = 0.777;
+$bitcoin_threshold = 20000.0;
+
 $APIurl = "https://api.coinmarketcap.com/v1/ticker/";
-$coins = ['bitcoin', 'ripple', 'ethereum', 'zencash', 'neo', 'vertcoin', 'stellar', 'district0x'];
+$coins = ['bitcoin', 'ripple'];//, 'ethereum', 'zencash', 'neo', 'vertcoin', 'stellar', 'district0x'];
 
 function curl_get_content($URL) {
       $ch = curl_init();
@@ -65,7 +65,8 @@ foreach ($coins as $coin) {
 
 	// create db file if not exists
 	make_file_ifne($coin . "/CoinTable.json");
-
+	chmod($coin, 0777);
+	chmod($coin . "/CoinTable.json", 0777);
 	// append data to the db file
 	// first creating json object
 	$coinObject = new recordedCoinData();
@@ -83,26 +84,41 @@ foreach ($coins as $coin) {
 	fclose($myfile);
 
 	// sleep for a 1/4 of a second.
-	usleep(250000);
-	break;
+	//usleep(250000);
+
+	if ($coin == "ripple") {
+		$threshold = $ripple_threshold;
+	}
+	elseif ($coin == "bitcoin") {
+		$threshold = $bitcoin_threshold;
+	}
+	surpassed_question($threshold, $coin, $coin_USDPrice);
 }
 
-$sendIt = false;
+function surpassed_question($threshold, $coin_type, $now_val) {
+	echo "THRESHOLD IS: " . $threshold . "</br>\n";
+	echo "COIN_TYPE IS: " . $coin_type . "</br>\n";
+	echo "NOW_VAL IS: " . $now_val . "</br>\n";
+	$addresses = ['6464643484@tmomail.net', 'ilankleiman@gmail.com'];
+	foreach ($addresses as $address) {
+		if (floatval($now_val) > floatval($threshold)) {
+			echo "threshold met</br>\n";
+			$to      = $address;
+			$subject = $coin_type . " THRESHOLD MET\n";
+			$message = "\nThreshold was set at " . $threshold . "\nCURRENT VALUE: " . $now_val;
+			$headers = 'From: CoinAlert@ilankleiman.com' . "\r\n" .
+			    'Reply-To: ' . $address . "\r\n" .
+			    'X-Mailer: PHP/' . phpversion();
 
-if($sendIt) {
-	$to      = 'myemail@tmomail.net';
-	$subject = 'Subject Here';
-	$message = 'Test message blah bla';
-	$headers = 'From: CoinAlert@mywebsite.com' . "\r\n" .
-	    'Reply-To: myemail@tmomail.net' . "\r\n" .
-	    'X-Mailer: PHP/' . phpversion();
+			mail($to, $subject, $message, $headers);
+			echo "Sent successfully<br/>\n";
+		}
+		else {
+			echo "Mail not sent to " . $address . "<br/>\n";
+		}
+	}
+}
 
-	mail($to, $subject, $message, $headers);
-	echo "Sent successfully<br/>\n";
-}
-else {
-	echo "Mail not sent<br/>\n";
-}
 
 echo "Complete.";
 ?>
