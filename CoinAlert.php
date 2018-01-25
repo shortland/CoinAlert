@@ -4,8 +4,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$ripple_threshold = 0.777;
-$bitcoin_threshold = 20000.0;
+$ripple_threshold = floatval(file_get_contents("ripple.txt"));
+$bitcoin_threshold = floatval(file_get_contents("bitcoin.txt"));
 $api = "https://www.bitstamp.net/api/v2/ticker/";
 
 class coin_data {
@@ -23,6 +23,18 @@ function get_content($URL) {
 	return $data;
 }
 
+function last_sent_update($time) {
+	$fh = fopen("last.txt", "w") or die("Unable to open file!");
+	fwrite($fh, $time);
+	fclose($fh);
+	return;
+}
+
+function last_sent_get() {
+	$fc = file_get_contents("last.txt");
+	return floatval($fc);
+}
+
 function surpassed_question($threshold, $coin_type, $now_val) {
 	echo "THRESHOLD IS: " . $threshold . "</br>\n";
 	echo "COIN_TYPE IS: " . $coin_type . "</br>\n";
@@ -37,9 +49,15 @@ function surpassed_question($threshold, $coin_type, $now_val) {
 			$headers = 'From: CoinAlert@ilankleiman.com' . "\r\n" .
 			    'Reply-To: ' . $address . "\r\n" .
 			    'X-Mailer: PHP/' . phpversion();
-
-			mail($to, $subject, $message, $headers);
-			echo "Sent successfully<br/>\n";
+			if ((last_sent_get() - time()) < 3600) {
+				// don't update cause it's been less than 1 hr from last notification
+				echo "Already notified within last 1 hr. Not sending.</br>\n";
+			}
+			else {
+				mail($to, $subject, $message, $headers);
+				last_sent_update(time());
+				echo "Sent successfully</br>\n";
+			}
 		}
 		else {
 			echo "Mail not sent to " . $address . "<br/>\n";
@@ -67,4 +85,5 @@ function begin($api, $bitcoin_threshold, $ripple_threshold) {
 
 begin($api, $bitcoin_threshold, $ripple_threshold);
 echo "Complete.";
+
 ?>
