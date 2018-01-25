@@ -8,6 +8,20 @@ $ripple_threshold = floatval(file_get_contents("ripple.txt"));
 $bitcoin_threshold = floatval(file_get_contents("bitcoin.txt"));
 $api = "https://www.bitstamp.net/api/v2/ticker/";
 
+function change_threshold_btc($amt) {
+	$fh = fopen("bitcoin.txt", "w") or die("Unable to open file!");
+	fwrite($fh, $amt);
+	fclose($fh);
+	return;
+}
+
+function change_threshold_xrp($amt) {
+	$fh = fopen("ripple.txt", "w") or die("Unable to open file!");
+	fwrite($fh, $amt);
+	fclose($fh);
+	return;
+}
+
 class coin_data {
 	public $list = ['bitcoin', 'ripple'];
 	public $bitcoin = 'btcusd';
@@ -63,10 +77,39 @@ function surpassed_question($threshold, $coin_type, $now_val) {
 			echo "Mail not sent to " . $address . "<br/>\n";
 		}
 	}
+	return;
 }
 
 function begin($api, $bitcoin_threshold, $ripple_threshold) {
+	if (isset($_POST['amt']) && isset($_POST['type'])) {
+		if ($_POST['type'] == "BTC") {
+			change_threshold_btc($_POST['amt']);
+			echo "Changed BTC threshold. May need to reload page.</br>\n";
+		}
+		elseif ($_POST['type'] == "XRP") {
+			change_threshold_xrp($_POST['amt']);
+			echo "Changed XRP threshold. May need to reload page.</br>\n";
+		}
+		else {
+			echo "Unknown type error.";
+		}
+	}
 	echo "<h3>CoinAlerts Main Script</h3>\n";
+	echo 
+	"<p>Change BTC Threshold:</p>
+	<form method='post' action=''>
+		<input type='text' name='amt' placeholder='20000.0'/>
+		<input type='hidden' name='type' value='BTC'/>
+		<input type='submit' value='Change'/>
+	</form></br>
+	<p>Change XRP Threshold:</p>
+	<form method='post' action=''>
+		<input type='text' name='amt' placeholder='2.0'/>
+		<input type='hidden' name='type' value='XRP'/>
+		<input type='submit' value='Change'/>
+	</form>
+	</br>
+	";
 	$coins = new coin_data();
 	foreach ($coins->list as $coin) {
 		echo "<p style='font-weight:bold;'>" . $coin . " (" . $coins->$coin . ")</p>\n";
@@ -81,6 +124,7 @@ function begin($api, $bitcoin_threshold, $ripple_threshold) {
 		surpassed_question($threshold, $coin, $coin_USDPrice);
 		echo "</br>\n";
 	}
+	return;
 }
 
 begin($api, $bitcoin_threshold, $ripple_threshold);
